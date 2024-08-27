@@ -15,6 +15,8 @@
 #include "userprog/process.h"
 #endif
 
+struct list ready_list;
+struct list sleep_list;
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -26,7 +28,7 @@
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
-static struct list ready_list;
+//static struct list ready_list;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -109,6 +111,7 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+	list_init(&sleep_list);
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -207,6 +210,11 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 
+	/* thread priority */
+	// if (t->priority > thread_current()->priority) {
+	// 	thread_yield();
+	// }
+
 	return tid;
 }
 
@@ -296,25 +304,33 @@ thread_exit (void) {
    may be scheduled again immediately at the scheduler's whim. */
 void
 thread_yield (void) {
-	struct thread *curr = thread_current ();
-	enum intr_level old_level;
+	struct thread *curr = thread_current ();//현재 실행중인 스레드
+	enum intr_level old_level;//인터럽트 level:on/off
 
-	ASSERT (!intr_context ());
+	ASSERT (!intr_context ());//외부 인터럽트가 들어왔으면 True, 아니면 False
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
-	do_schedule (THREAD_READY);
+		list_push_back (&ready_list, &curr->elem);//ready리스트 맨 마지막에 curr
+	do_schedule (THREAD_READY);//컨텍스트 스위칭,  running->ready
 	intr_set_level (old_level);
 }
+//list_insert 함수 두번째 인자에 해당하는 스레드가 첫번째 인자에 해당하는 스레드 앞에옴
+/* 스레드의 우선 순위를 비교한다 */
+bool thread_compare_priority(struct list_elem *a, struct list_elem *b, void *aux) {
+	return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
+}
 
-/* Sets the current thread's priority to NEW_PRIORITY. */
+
+/* Sets the current thread's priority to NEW_PRIORITY.
+현재 스레드의 우선 순위를 새 우선순위로 설정한다 */
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
 }
 
-/* Returns the current thread's priority. */
+/* Returns the current thread's priority. 
+현재 스레드의 우선 순위를 반환한다. */
 int
 thread_get_priority (void) {
 	return thread_current ()->priority;
@@ -529,7 +545,7 @@ static void
 do_schedule(int status) {
 	ASSERT (intr_get_level () == INTR_OFF);
 	ASSERT (thread_current()->status == THREAD_RUNNING);
-	while (!list_empty (&destruction_req)) {
+	while (!list_empty (&destruction_req)) {//종료예약된스레드
 		struct thread *victim =
 			list_entry (list_pop_front (&destruction_req), struct thread, elem);
 		palloc_free_page(victim);
