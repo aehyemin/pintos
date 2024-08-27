@@ -1,2 +1,7 @@
 FAIL
-Run didn't shut down properly: no "Timer: # ticks" message
+Kernel panic in run: PANIC at ../../threads/interrupt.c:361 in intr_handler(): Unexpected interrupt
+Call stack: 0x800421342b 0x8004208857 0x8004208c09
+Translation of call stack:
+0x000000800421342b: debug_panic (lib/kernel/debug.c:32)
+0x0000008004208857: intr_handler (threads/interrupt.c:365)
+0x0000008004208c09: intr_entry (threads/intr-stubs.o:?)
