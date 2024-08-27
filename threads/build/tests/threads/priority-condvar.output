@@ -4,14 +4,32 @@ Kernel command line: -q run priority-condvar
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  9,817,600 loops/s.
+Calibrating timer...  17,996,800 loops/s.
 Boot complete.
 Executing 'priority-condvar':
-Kernel PANIC at ../../tests/threads/tests.c:60 in run_test(): no test named "priority-condvar"
-Call stack: 0x800421337a 0x8004216828 0x8004206636 0x8004206783 0x8004206120.
-The `backtrace' program can make call stacks useful.
-Read "Backtraces" in the "Debugging Tools" chapter
-of the Pintos documentation for more information.
-Timer: 26 ticks
-Thread: 1 idle ticks, 25 kernel ticks, 0 user ticks
-Console: 
+(priority-condvar) begin
+(priority-condvar) Thread priority 30 starting.
+(priority-condvar) Thread priority 29 starting.
+(priority-condvar) Thread priority 28 starting.
+(priority-condvar) Thread priority 27 starting.
+(priority-condvar) Thread priority 26 starting.
+(priority-condvar) Thread priority 23 starting.
+(priority-condvar) Thread priority 22 starting.
+(priority-condvar) Thread priority 21 starting.
+(priority-condvar) Signaling...
+(priority-condvar) Signaling...
+(priority-condvar) Signaling...
+(priority-condvar) Signaling...
+(priority-condvar) Signaling...
+(priority-condvar) Signaling...
+(priority-condvar) Signaling...
+(priority-condvar) Signaling...
+(priority-condvar) Signaling...
+(priority-condvar) Signaling...
+(priority-condvar) end
+Execution of 'priority-condvar' complete.
+Timer: 53 ticks
+Thread: 1 idle ticks, 53 kernel ticks, 0 user ticks
+Console: 1140 characters output
+Keyboard: 0 keys pressed
+Powering off...

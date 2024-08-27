@@ -1,9 +1,8 @@
 FAIL
-Kernel panic in run: PANIC at ../../tests/threads/tests.c:60 in run_test(): no test named "priority-donate-multiple2"
-Call stack: 0x800421337a 0x8004216828 0x8004206636 0x8004206783 0x8004206120
+Kernel panic in run: PANIC at ../../threads/synch.c:223 in lock_release(): assertion `lock_held_by_current_thread (lock)' failed.
+Call stack: 0x80042133a5 0x8004209da8 0x80042180b4 0x80042071f4
 Translation of call stack:
-0x000000800421337a: debug_panic (lib/kernel/debug.c:32)
-0x0000008004216828: run_test (tests/threads/tests.c:61)
-0x0000008004206636: run_task (threads/init.c:252)
-0x0000008004206783: run_actions (threads/init.c:297)
-0x0000008004206120: main (threads/init.c:125)
+0x00000080042133a5: debug_panic (lib/kernel/debug.c:32)
+0x0000008004209da8: lock_release (threads/synch.c:225)
+0x00000080042180b4: b_thread_func (tests/threads/priority-donate-multiple2.c:83)
+0x00000080042071f4: kernel_thread (threads/thread.c:414)

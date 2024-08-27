@@ -65,6 +65,8 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 
+static bool thread_compare_priority(struct list_elem *a, struct list_elem *b, void *aux UNUSED);
+
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
@@ -248,7 +250,8 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	//list_push_back (&ready_list, &t->elem);
+	list_insert_ordered(&ready_list, &t->elem, thread_compare_priority, 0);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -311,13 +314,14 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);//ready리스트 맨 마지막에 curr
+		list_insert_ordered(&ready_list, &curr->elem, thread_compare_priority, 0);
+		//list_push_back (&ready_list, &curr->elem);//ready리스트 맨 마지막에 curr
 	do_schedule (THREAD_READY);//컨텍스트 스위칭,  running->ready
 	intr_set_level (old_level);
 }
 //list_insert 함수 두번째 인자에 해당하는 스레드가 첫번째 인자에 해당하는 스레드 앞에옴
 /* 스레드의 우선 순위를 비교한다 */
-bool thread_compare_priority(struct list_elem *a, struct list_elem *b, void *aux) {
+bool thread_compare_priority(struct list_elem *a, struct list_elem *b, void *aux UNUSED) {
 	return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
 }
 
