@@ -23,27 +23,32 @@ Executing 'priority-donate-chain':
 (priority-donate-chain) interloper 6 finished.
 (priority-donate-chain) main should have priority 21.  Actual priority: 0.
 (priority-donate-chain) interloper 7 finished.
+(priority-donate-chain) thread 1 got lock
+(priority-donate-chain) thread 1 should have priority 21. Actual priority: 3
+(priority-donate-chain) thread 2 got lock
+(priority-donate-chain) thread 2 should have priority 21. Actual priority: 6
+(priority-donate-chain) thread 3 got lock
+(priority-donate-chain) thread 3 should have priority 21. Actual priority: 9
+(priority-donate-chain) thread 4 got lock
+(priority-donate-chain) thread 4 should have priority 21. Actual priority: 12
+(priority-donate-chain) thread 5 got lock
+(priority-donate-chain) thread 5 should have priority 21. Actual priority: 15
+(priority-donate-chain) thread 6 got lock
+(priority-donate-chain) thread 6 should have priority 21. Actual priority: 18
+(priority-donate-chain) thread 7 got lock
+(priority-donate-chain) thread 7 should have priority 21. Actual priority: 21
+(priority-donate-chain) thread 7 finishing with priority 21.
+(priority-donate-chain) thread 6 finishing with priority 18.
+(priority-donate-chain) thread 5 finishing with priority 15.
+(priority-donate-chain) thread 4 finishing with priority 12.
+(priority-donate-chain) thread 3 finishing with priority 9.
+(priority-donate-chain) thread 2 finishing with priority 6.
+(priority-donate-chain) thread 1 finishing with priority 3.
 (priority-donate-chain) main finishing with priority 0.
 (priority-donate-chain) end
 Execution of 'priority-donate-chain' complete.
-Interrupt 0x0d (#GP General Protection Exception) at rip=80042167f100
- cr2=0000000000000000 error=               0
-rax 0000000000000000 rbx 0000000000204400 rcx 00000080040b8000 rdx 00000000000003d4
-rsp 0000008004000e1f rbp 00008004000e3000 rsi 000000000000800f rdi 0000000000000001
-rip 000080042167f100 r8 0000008004000efc  r9 0000008004216713 r10 0000000000000000
-r11 0000000000000000 r12 0000000000000000 r13 0000000000000000 r14 0000000000000000
-r15 0000000000000000 rflags 00200202
-es: 0010 ds: 0010 cs: 0008 ss: 0010
-Kernel PANIC at ../../threads/interrupt.c:361 in intr_handler(): Unexpected interrupt
-Call stack: 0x800421342b 0x8004208857 0x8004208c09Interrupt 0x0d (#GP General Protection Exception) at rip=8004210465
- cr2=0000000000000000 error=               0
-rax 00008004000e3000 rbx 0000000000204400 rcx 00000080040b8000 rdx 00000000000003d4
-rsp 0000008004000c80 rbp 0000008004000c90 rsi 000000000000b20f rdi 0000000000000000
-rip 0000008004210465 r8 0000008004000b98  r9 0000008004216713 r10 0000000000000000
-r11 0000000000000000 r12 0000000000000000 r13 0000000000000000 r14 0000000000000000
-r15 0000000000000000 rflags 00200006
-es: 0010 ds: 0010 cs: 0008 ss: 0010
-Kernel PANIC recursion at ../../threads/interrupt.c:361 in intr_handler().
-Timer: 47 ticks
-Thread: 0 idle ticks, 47 kernel ticks, 0 user ticks
-Console: 2
+Timer: 62 ticks
+Thread: 0 idle ticks, 63 kernel ticks, 0 user ticks
+Console: 2668 characters output
+Keyboard: 0 keys pressed
+Powering off...

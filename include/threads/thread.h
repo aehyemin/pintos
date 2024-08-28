@@ -150,4 +150,8 @@ void thread_awake(int64_t ticks);
 extern struct list ready_list;
 extern struct list sleep_list;
 
+
+void check_preemption(void);
+bool sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool thread_compare_priority(struct list_elem *a, struct list_elem *b, void *aux UNUSED);
 #endif /* threads/thread.h */
