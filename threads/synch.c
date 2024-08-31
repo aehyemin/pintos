@@ -1,6 +1,7 @@
 /* This file is derived from source code for the Nachos
    instructional operating system.  The Nachos copyright notice
    is reproduced in full below. */
+//함수를 써 기능을 써 구현해
 
 /* Copyright (c) 1992-1996 The Regents of the University of California.
    All rights reserved.
@@ -195,16 +196,47 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
-	sema_down (&lock->semaphore);
-	lock->holder = thread_current ();
-}
+	struct thread *cur = thread_current();
 
+	//해당 lock 의 holder 가 존재한다면
+	if(lock->holder) {
+
+	//현재 스레드의 wait_on_lock 변수에 획득 하기를 기다리는 lock의 주소를 저장
+		cur->wait_on_lock = lock;
+
+// /* Lock. */
+// struct lock {
+// 	struct thread *holder;      /* Thread holding lock (for debugging). */
+// 	struct semaphore semaphore; /* Binary semaphore controlling access. */
+// };
+	//multiple donation을 고려하기 위해 이전 상태의 우선순위 기억,
+	//donation을 받은 스레드의 thread 구조체를 list로 관리한다
+		//list_push_back(&lock->holder->donations, &t->donation_elem);
+	list_insert_ordered (&lock->holder->donations, &cur->donation_elem, thread_compare_priority, 0);
+
+	//priority donation을 고려하기 위해 donate_priority()함수 호출
+	donate_priority();
+
+	}
+
+	sema_down (&lock->semaphore);
+	//lock->holder = thread_current ();
+	cur->wait_on_lock = NULL;
+
+	//lock 을 획득 한 후 lock holder를 갱신
+	lock->holder = cur;
+
+}
 /* Tries to acquires LOCK and returns true if successful or false
    on failure.  The lock must not already be held by the current
    thread.
 
    This function will not sleep, so it may be called within an
-   interrupt handler. */
+   interrupt handler. 
+   
+   지정된 락을 획득하려고 시도함. 획득하면 True.
+   현재 스레드가 이미 락을 소유하고 있지 않아야함
+   이 함수는 잠들지 않기 때문에 인터럽트 핸들러에서도 호출할 수 있다. */
 bool
 lock_try_acquire (struct lock *lock) {
 	bool success;
@@ -223,19 +255,30 @@ lock_try_acquire (struct lock *lock) {
 
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to release a lock within an interrupt
-   handler. */
+   handler. 
+   락을 해제한다. 락을 해제할 수 있는 것은 락을 보유한 현재 스레드이다 */
 void
 lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
-	lock->holder = NULL;
+    lock->holder = NULL;
+	//priority 를 빌려준 스레드들을 donation 리스트에서 제거하고, priority 재설정
+	// reomve with lock 함수 추가
+	remove_with_lock(lock);
+
+	// refresh priority 추가
+	refresh_priority();
+
+	//lock->holder = NULL;
+
 	sema_up (&lock->semaphore);
 }
 
-/* Returns true if the current thread holds LOCK, false
+/* Returns true if the current thread holds LOK, false
    otherwise.  (Note that testing whether some other thread holds
-   a lock would be racy.) */
+   a lock would be racy.)
+   락을 현재 스레드가 보유했으면 true, 그렇지 않으면 false를 반환한다. */
 bool
 lock_held_by_current_thread (const struct lock *lock) {
 	ASSERT (lock != NULL);
@@ -311,25 +354,14 @@ bool sema_priority(const struct list_elem *a, const struct list_elem *b, void *a
     }
 
 
-	struct thread *root_a = list_entry(list_begin(waiters_a), struct thread, elem);
-	struct thread *root_b = list_entry(list_begin(waiters_b), struct thread, elem);
+	struct thread *thread_a = list_entry(list_begin(waiters_a), struct thread, elem);
+	struct thread *thread_b = list_entry(list_begin(waiters_b), struct thread, elem);
 
-	return root_a->priority > root_b->priority;
+	return thread_a->priority > thread_b->priority;
 }
-// struct condition {
-// 	struct list waiters;        /* List of waiting threads. */
-// };
 
-// struct semaphore_elem {
-// 	struct list_elem elem;              /* List element. */
-// 	struct semaphore semaphore;         /* This semaphore. */
-// };
 
-// struct semaphore {
-// 	unsigned value;             /* Current value. */
-// 	struct list waiters;        /* List of waiting threads. */
-// };
-	
+
 
 /* If any threads are waiting on COND (protected by LOCK), then
    this function signals one of them to wake up from its wait.

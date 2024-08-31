@@ -93,6 +93,11 @@ struct thread {
 	int priority;                       /* Priority. */
 	int wakeup;
 
+	int init_priority; //donation을 대비해 원래의 priority 값 저장
+	struct lock *wait_on_lock; //해당스레드가 현재 얻기 위해 기다리는 lock. 
+	struct list donations; //priority를 내어준 스레드의 리스트
+	struct list_elem donation_elem;//donations 리스트를 요소를 관리
+	
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
@@ -154,4 +159,9 @@ extern struct list sleep_list;
 void check_preemption(void);
 bool sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
 bool thread_compare_priority(struct list_elem *a, struct list_elem *b, void *aux UNUSED);
+
+void donate_priority(void);
+void remove_with_lock(struct lock *lock);
+void refresh_priority(void);
+
 #endif /* threads/thread.h */

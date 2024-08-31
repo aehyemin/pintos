@@ -97,7 +97,7 @@ static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
    It is not safe to call thread_current() until this function
    finishes. */
 void
-thread_init (void) {
+thread_init (void) {//최초의 스레드 부르기
 	ASSERT (intr_get_level () == INTR_OFF);
 
 	/* Reload the temporal gdt for the kernel
@@ -114,6 +114,10 @@ thread_init (void) {
 	list_init (&ready_list);
 	list_init (&destruction_req);
 	list_init(&sleep_list);
+
+	// t->init_prioirty = priority;
+	//list_init(&t->donation);
+	//t->wait_on_list = NULL;
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -342,7 +346,12 @@ void check_preemption(void){
 현재 스레드의 우선 순위를 새 우선순위로 설정한다 */
 void
 thread_set_priority (int new_priority) {
+	//donation을 고려하여 thread_set_priority 수정
+	//refresh_priority함수를 사용하여 우선순위 변경으로 인한 donation관련 정보 갱신
+	// check_preemption, 사용하여 우선순위 기부 수행, 스케줄링
+	thread_current ()->init_priority = new_priority;
 	thread_current ()->priority = new_priority;
+	refresh_priority();
 	check_preemption();
 }
 
@@ -431,7 +440,7 @@ kernel_thread (thread_func *function, void *aux) {
 /* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
-init_thread (struct thread *t, const char *name, int priority) {
+init_thread (struct thread *t, const char *name, int priority) {//스레드 만들기
 	ASSERT (t != NULL);
 	ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
 	ASSERT (name != NULL);
@@ -442,6 +451,11 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+
+    t->init_priority = priority;
+	t->wait_on_lock = NULL;
+	list_init(&t->donations);
+
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -621,3 +635,84 @@ allocate_tid (void) {
 
 	return tid;
 }
+
+//nested
+//multiple 한번에 여러개 lock이 필요하면 왔다 갔다 한개씩 모두 획득해야 작업시작
+void donate_priority(void) {
+	//priority donation 을 수행하는 함수를 구현한다.
+	//현재 스레드가 기다리고 있는 lock과 연결된 모든 스레드들을 순회하며
+	//현재 스레드의 우선순위를 lock을 보유하고 있는 스레드에게 기부한다
+	//nested depth 는 8로 제한한다
+	int cnt = 0;
+	struct thread *t = thread_current();
+	int cur_priority = t->priority; //이전 스레드 우선순위 기억
+
+	while (cnt < 9) {
+		cnt++;
+		if (t->wait_on_lock == NULL) {//현재 스레드가 기다리고 있는 락이 없으면 종료
+			break;
+		}
+		t = t->wait_on_lock->holder; //홀더 전달
+		t->priority = cur_priority; //우선순위 기부
+	}
+}
+
+void remove_with_lock(struct lock *lock) {
+	//lock을 해지 했을 때 donations 리스트에서 해당 엔트리를 삭제하기 위한 함수 구현
+	//현재 스레드의 donations 리스트를 확인하여 해지 할 lock을 보유하고 잇는 엔트리 삭제
+	struct thread *t = thread_current();
+	struct list_elem *e = list_begin(&t->donations);
+	//리스트의 처음부터 끝까지 확인하여
+	for (e; e!=list_end(&t->donations);) {
+		struct thread *cur = list_entry(e, struct thread, donation_elem);
+
+		if (cur->wait_on_lock == lock) {
+			e = list_remove(e);
+		} else {
+			e = list_next(e);
+		}
+	}
+}
+
+// void remove_with_lock (struct lock *lock)
+// {
+// 	struct thread *t = thread_current();
+// 	struct list_elem *e = list_begin(&t->donations);
+ 
+// 	for (e ; e != list_end((&t->donations));)
+// 	{
+// 		struct thread *cur = list_entry(e, struct thread, donation_elem);
+// 		if (cur->wait_on_lock == lock)
+// 		{
+// 			e = list_remove(e);
+// 		}
+// 		else
+// 		{
+// 			e = list_next(e);
+// 		}
+// 	}
+// }
+
+
+void refresh_priority(void) {
+	//스레드의 우선순위가 변경 되었을 때 donation을 고려하여 우선순위 다시 결정
+	//현재 스레드의 우선순위를 기부받기 전의 우선순위로 변경
+	//가장 우선순위가 높은 donations리스트의 스레드와 현재 스레드의 우선순위를 비교하여 높은 값을
+	//현재 스레드의 우선 순위로 설정한다
+	struct thread *t = thread_current();
+	t->priority = t->init_priority;
+	//struct list_elem * e = list_begin(&t->donations);
+	
+	if (list_empty(&t->donations) == false) { //도네이션 리스트가 빌 때까지
+		//list_sort(&t->donations, thread_compare_priority, 0);
+		struct thread *first = list_entry(list_front(&t->donations), struct thread, donation_elem);
+		if (first->priority > t->priority) {
+			t->priority = first->priority;
+		}
+	}
+
+
+
+
+}
+
