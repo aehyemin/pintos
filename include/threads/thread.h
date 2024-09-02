@@ -7,7 +7,10 @@
 #include "threads/interrupt.h"
 #ifdef VM
 #include "vm/vm.h"
+
+
 #endif
+
 
 
 /* States in a thread's life cycle. */
@@ -27,6 +30,7 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
+
 
 /* A kernel thread or user process.
  *
@@ -97,9 +101,14 @@ struct thread {
 	struct lock *wait_on_lock; //해당스레드가 현재 얻기 위해 기다리는 lock. 
 	struct list donations; //priority를 내어준 스레드의 리스트
 	struct list_elem donation_elem;//donations 리스트를 요소를 관리
+
+	int nice;
+	int recent_cpu;
+	struct list_elem allelem;
 	
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
+
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
@@ -164,4 +173,12 @@ void donate_priority(void);
 void remove_with_lock(struct lock *lock);
 void refresh_priority(void);
 
+
+void refresh_priority(void);
+void mlfqs_priority (struct thread *t) ;
+void mlfqs_recent_cpu (struct thread *t) ;
+void mlfqs_load_avg (void) ;
+void mlfqs_increment (void) ;
+void mlfqs_recalc_recent_cpu (void) ;
+void mlfqs_recalc_priority (void) ;
 #endif /* threads/thread.h */

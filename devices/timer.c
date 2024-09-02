@@ -17,8 +17,14 @@
 #error TIMER_FREQ <= 1000 recommended
 #endif
 
+
 /* 시스템이 부팅된 이후 지나간 타이머 틱 수. Number of timer ticks since OS booted. */
 static int64_t ticks;
+
+
+#define F (1 << 14) /* fixed point 1 */
+
+int64_t MIN_alarm_time = INT64_MAX;
 
 /* Number of loops per timer tick.
    Initialized by timer_calibrate().
@@ -188,8 +194,28 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
 	thread_tick ();
-	thread_awake(ticks);//ticks가 증가할때마다 수행
+	//thread_awake(ticks);//ticks가 증가할때마다 수행
+	//mlfqs 스케줄러일 경우
+	//timer_interrupt가 발생할때마다 recent_cpu 1증가,
+	//1초마다 load_avg, recent_cpu, priority 계산,
+	//매 4tcik 마다 priority 계산
+	if (thread_mlfqs) {
+		mlfqs_increment();
 
+		if (timer_ticks() % 4 == 0)  {
+			mlfqs_recalc_priority();
+		}
+
+		if (timer_ticks() % 100 == 0) {
+			mlfqs_load_avg();
+				//mlfqs_recalc_priority();
+			mlfqs_recalc_recent_cpu();
+			}
+		}
+		//if(MIN_alarm_time <= ticks) {
+			thread_awake(ticks);
+		//}
+	
 
 }
 
