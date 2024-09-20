@@ -157,13 +157,24 @@ __do_fork (void *aux) {
 error:
 	thread_exit ();
 }
-
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
 int
 process_exec (void *f_name) {
 	char *file_name = f_name;
 	bool success;
+
+
+
+	// char f_name[] = "hello world example";
+	//load 함수 안으로 이동
+	// for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
+	// 	argc++;
+	// 	argv[argc] = token;
+	// }
+	//첫번째 토큰은 hello
+	//두번째 토큰은 world
+	//세번째 토큰은 example
 
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
@@ -176,17 +187,106 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
+
+	///////////////////
+	char *token, *save_ptr;
+	int argc = 0;
+	char *argv[128]; 
+	
+
+	// token = strtok_r(file_name, " ", &save_ptr);
+	// while (token != NULL)
+	// {
+	// 	argv[argc] = token;
+	// 	token = strtok_r(NULL, " ", &save_ptr);
+	// 	argc++;
+	// }
+	token = strtok_r(file_name, " ", &save_ptr);
+	// argv[argc] = token;
+
+	while(token != NULL){
+		token = strtok_r(NULL, " ", &save_ptr);
+		argv[argc++] = token;
+	}
+
 	/* And then load the binary */
 	success = load (file_name, &_if);
-
+	//file 을 load 해줌
+	//user stack에 쌓는 것은 load한 이후에 추가한다
+	
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
 	if (!success)
 		return -1;
 
+	argument_stack(argv, argc, &_if);
+
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
+
+	hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);
+}
+
+//안에다 구현해도 상관없고 밖에다 해도됨
+void argument_stack(char **argv, int argc, struct intr_frame *if_){
+	char *arg_address[128];
+	//insert argument address
+	for (int i = argc -1; i>=0; i--) {
+
+		int argv_len = strlen(argv[i]) + 1;
+		//rsp:스택 포인터 레지스터
+		if_->rsp -= argv_len;
+		//memcpy(저장된 메모리 블록 시작 주소, 복사할 데이터 메모리 시작 주소, 복사할 바이트 수)
+		memcpy(if_->rsp ,argv[i], argv_len);
+		arg_address[i] = if_->rsp;
+	}
+
+	//스택에 첫 푸시가 발생하기 전, 스택 포인터를 8의 배수로 반올림해야한다
+	//스택에서 사용하지 않는 공간을 패딩으로 채워 스택 포인터를 조정한다
+	//uint8_t 1비트(8바이트)
+	while (if_->rsp % 8 != 0) {
+		if_->rsp--; 
+		*(uint8_t *)(if_->rsp) = 0;//감소된 위치에 0(NULL)
+	}
+
+	//3. 각 문자열의 주소+경계조건을 위한 널포인터를 스택에 오른쪽->왼쪽 푸시
+	//이들은argv의 원소가 된다. sentinel은 데이터 구조의 끝부분, 정렬조건
+	//널포인터 경계는 arg_address[argc]가 C언어 표준 요구사항에 맞워서 널포인트라는 사실 보장
+	//그리고 이 순서는 argv[0]이 가장 낮은 가상 주소를 가진다는 사실 보장
+	for (int i=argc; i>=0; i--) {
+		// if_->rsp = if_->rsp + 8;
+		if_->rsp = if_->rsp - 8;
+
+		if (i == argc) {
+			//void *memset(void *ptr, int value, size_t num);
+			//siezeof(char **) 는 포인터의 크기
+			memset(if_->rsp, 0, sizeof(char **));
+		} else {
+			//arg_address의 주소 입력
+			memcpy(if_->rsp, &arg_address[i], sizeof(char **));
+		}
+
+	}
+
+
+//5.가짜 "리턴 어드레스" 푸시. entry함수는 절대 리턴되지 않지만, 해당 스택 프레임은
+//다른 스택 프레임과 같은 구조를 가져야 한다.
+//프로그램의 시작 시점 설정
+// if_->rsp -= 8;
+// memset(if_->rsp, 0, 8);
+
+//4. %rsi 가 argv주소(argv[0]의 주소)를 가리키게 하고
+//%rdi를 argc로 설정한다
+//R은 하드웨어 레지스터에 직접 접근
+// if_->R.rdi = argc;
+// if_->R.rsi = if_->rsp+8;
+
+if_->R.rsi = if_->rsp -8;
+memset(if_->rsp, 0, sizeof(void *));
+
+if_->R.rdi = argc;
+if_->rsp = if_->rsp+8;
 }
 
 
@@ -204,6 +304,7 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
+	while(1){}
 	return -1;
 }
 
