@@ -5,12 +5,10 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
-
-
 #endif
-
 
 
 /* States in a thread's life cycle. */
@@ -25,12 +23,11 @@ enum thread_status {
    You can redefine this to whatever type you like. */
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
-
+#define maxfd 30
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
-
 
 /* A kernel thread or user process.
  *
@@ -95,28 +92,37 @@ struct thread {
 	enum thread_status status;          /* Thread state. */
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
-	int wakeup;
-
-	int init_priority; //donation을 대비해 원래의 priority 값 저장
-	struct lock *wait_on_lock; //해당스레드가 현재 얻기 위해 기다리는 lock. 
-	struct list donations; //priority를 내어준 스레드의 리스트
-	struct list_elem donation_elem;//donations 리스트를 요소를 관리
-
+	int original_priority;
+	int64_t tick; //for wakeup
+	/* Shared between thread.c and synch.c. */
 	int nice;
 	int recent_cpu;
-	struct list_elem allelem;
-	
-	/* Shared between thread.c and synch.c. */
+	struct lock *lock;
+	struct list donate_list;
+	struct list_elem donate_elem;
+	struct list_elem all_elem;
 	struct list_elem elem;              /* List element. */
-
-
-#ifdef USERPROG
+	
+// #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
-#endif
+	int exit_status;
+	bool is_exit;
+	struct thread *parent;
+	struct file *exec_file;
+	struct intr_frame f;
+	struct list child_list;
+	struct list_elem child_elem;
+	struct semaphore fork_sema;
+	struct semaphore wait_sema;
+	struct semaphore synch_sema;
+	struct file* fdt[maxfd];
+
+// #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
 	struct supplemental_page_table spt;
+	void *rsp;
 #endif
 
 	/* Owned by thread.c. */
@@ -158,27 +164,23 @@ int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
 
-void thread_sleep(int64_t ticks);
-void thread_awake(int64_t ticks);
+void thread_sleep(int64_t tick);
 
-extern struct list ready_list;
-extern struct list sleep_list;
+void thread_awake();
 
+bool cmp_thread_tick(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool cmp_thread_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool max_thread_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool max_donated_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool max_cond_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
 
-void check_preemption(void);
-bool sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
-bool thread_compare_priority(struct list_elem *a, struct list_elem *b, void *aux UNUSED);
+void all_thread_priority();
+void all_thread_recent_cpu();
+void increase_recent_cpu();
+void set_priority(struct thread *t);
+void set_recent_cpu(struct thread *t);
+void set_load_avg();
 
-void donate_priority(void);
-void remove_with_lock(struct lock *lock);
-void refresh_priority(void);
+void thread_preempt();
 
-
-void refresh_priority(void);
-void mlfqs_priority (struct thread *t) ;
-void mlfqs_recent_cpu (struct thread *t) ;
-void mlfqs_load_avg (void) ;
-void mlfqs_increment (void) ;
-void mlfqs_recalc_recent_cpu (void) ;
-void mlfqs_recalc_priority (void) ;
 #endif /* threads/thread.h */
